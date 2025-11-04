@@ -9,7 +9,7 @@ ENV PATH="$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/pla
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends wget unzip zip git git-lfs ca-certificates \
-    && sdk install gradle \
+    # && sdk install gradle \
     && mkdir -p ${ANDROID_SDK_ROOT} /tmp/android-sdk \
     # Download Android command line tools
     && wget -q https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip -O /tmp/cmdline.zip \
