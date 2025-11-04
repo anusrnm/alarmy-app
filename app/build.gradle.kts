@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("com.google.devtools.ksp")
+    id("com.google.dagger.hilt.android")
 }
 
 android {
@@ -66,6 +67,7 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.compose.runtime:runtime-livedata")
+    implementation("com.google.android.material:material:1.12.0")
     
     // Room database
     implementation("androidx.room:room-runtime:2.6.1")
@@ -95,4 +97,10 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+
+    // Hilt DI
+    implementation("com.google.dagger:hilt-android:2.52")
+    ksp("com.google.dagger:hilt-compiler:2.52")
+    // Optional compose navigation helper (future usage)
+    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 }

@@ -31,7 +31,8 @@ fun AlarmEditDialog(
     var volume by remember { mutableStateOf(alarm?.volume ?: 80) }
     var vibrationPattern by remember { mutableStateOf(alarm?.vibrationPattern ?: 2) }
     var durationMinutes by remember { mutableStateOf(alarm?.durationMinutes ?: 5) }
-    var snoozeEnabled by remember { mutableStateOf(alarm?.isSnoozeEnabled ?: true) }
+    // Fix: property name in data model is snoozeEnabled (was incorrectly referenced as isSnoozeEnabled)
+    var snoozeEnabled by remember { mutableStateOf(alarm?.snoozeEnabled ?: true) }
     var snoozeInterval by remember { mutableStateOf(alarm?.snoozeIntervalMinutes ?: 5) }
 
     Dialog(onDismissRequest = onDismiss) {

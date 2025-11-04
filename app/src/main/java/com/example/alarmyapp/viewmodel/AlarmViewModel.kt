@@ -1,18 +1,21 @@
 package com.example.alarmyapp.viewmodel
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.alarmyapp.alarm.AlarmScheduler
 import com.example.alarmyapp.data.model.Alarm
 import com.example.alarmyapp.data.repository.AlarmRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class AlarmViewModel(application: Application) : AndroidViewModel(application) {
-    private val repository = AlarmRepository(application)
-    private val scheduler = AlarmScheduler(application)
-    
+@HiltViewModel
+class AlarmViewModel @Inject constructor(
+    private val repository: AlarmRepository,
+    private val scheduler: AlarmScheduler
+) : ViewModel() {
+
     val allAlarms: LiveData<List<Alarm>> = repository.allAlarms
 
     fun getAlarmById(id: Int): LiveData<Alarm?> = repository.getAlarmById(id)
@@ -22,7 +25,11 @@ class AlarmViewModel(application: Application) : AndroidViewModel(application) {
             val id = repository.insertAlarm(alarm)
             alarm.id = id.toInt()
             if (alarm.isEnabled) {
-                scheduler.scheduleAlarm(alarm)
+                val next = scheduler.scheduleAlarm(alarm)
+                if (next > 0) {
+                    alarm.nextAlarmTime = next
+                    repository.updateAlarm(alarm)
+                }
             }
         }
     }
@@ -31,7 +38,11 @@ class AlarmViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             repository.updateAlarm(alarm)
             if (alarm.isEnabled) {
-                scheduler.scheduleAlarm(alarm)
+                val next = scheduler.scheduleAlarm(alarm)
+                if (next > 0) {
+                    alarm.nextAlarmTime = next
+                    repository.updateAlarm(alarm)
+                }
             } else {
                 scheduler.cancelAlarm(alarm.id)
             }
@@ -49,8 +60,13 @@ class AlarmViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             repository.setAlarmEnabled(alarmId, enabled)
             if (enabled) {
-                getAlarmById(alarmId).observeForever { alarm ->
-                    alarm?.let { scheduler.scheduleAlarm(it) }
+                val alarm = repository.getAlarmEntity(alarmId)
+                if (alarm != null && alarm.isEnabled) {
+                    val next = scheduler.scheduleAlarm(alarm)
+                    if (next > 0) {
+                        alarm.nextAlarmTime = next
+                        repository.updateAlarm(alarm)
+                    }
                 }
             } else {
                 scheduler.cancelAlarm(alarmId)

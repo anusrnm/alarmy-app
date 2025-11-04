@@ -12,6 +12,10 @@ interface AlarmDao {
     @Query("SELECT * FROM alarms WHERE id = :id")
     fun getAlarmById(id: Int): LiveData<Alarm?>
 
+    // One-shot suspend variant to avoid observeForever leaks when we only need current value
+    @Query("SELECT * FROM alarms WHERE id = :id")
+    suspend fun getAlarmEntity(id: Int): Alarm?
+
     @Query("SELECT * FROM alarms WHERE isEnabled = 1")
     suspend fun getEnabledAlarms(): List<Alarm>
 

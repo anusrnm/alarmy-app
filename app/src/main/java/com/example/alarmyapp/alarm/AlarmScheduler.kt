@@ -6,20 +6,26 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import com.example.alarmyapp.data.model.Alarm
-import java.util.*
+import dagger.hilt.android.qualifiers.ApplicationContext
+import java.util.Calendar
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class AlarmScheduler(private val context: Context) {
+@Singleton
+class AlarmScheduler @Inject constructor(
+    @ApplicationContext private val context: Context
+) {
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
     companion object {
         private const val ALARM_ACTION = "com.example.alarmyapp.ALARM_TRIGGER"
     }
 
-    fun scheduleAlarm(alarm: Alarm) {
-        if (!alarm.isEnabled) return
+    fun scheduleAlarm(alarm: Alarm): Long {
+        if (!alarm.isEnabled) return -1
 
         val triggerTime = calculateNextTriggerTime(alarm)
-        alarm.nextAlarmTime = triggerTime
+        // Do not persist here; caller will update entity.
 
         val intent = Intent(context, AlarmReceiver::class.java).apply {
             action = ALARM_ACTION
@@ -58,6 +64,7 @@ class AlarmScheduler(private val context: Context) {
             // Fallback for devices without exact alarm permission
             alarmManager.set(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent)
         }
+        return triggerTime
     }
 
     fun cancelAlarm(alarmId: Int) {

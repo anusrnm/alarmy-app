@@ -1,19 +1,24 @@
 package com.example.alarmyapp.data.repository
 
-import android.content.Context
 import androidx.lifecycle.LiveData
 import com.example.alarmyapp.data.dao.AlarmDao
-import com.example.alarmyapp.data.database.AlarmDatabase
 import com.example.alarmyapp.data.model.Alarm
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class AlarmRepository(context: Context) {
-    private val alarmDao: AlarmDao = AlarmDatabase.getDatabase(context).alarmDao()
-    
+@Singleton
+class AlarmRepository @Inject constructor(
+    private val alarmDao: AlarmDao
+) {
     val allAlarms: LiveData<List<Alarm>> = alarmDao.getAllAlarms()
 
     fun getAlarmById(id: Int): LiveData<Alarm?> = alarmDao.getAlarmById(id)
+
+    suspend fun getAlarmEntity(id: Int): Alarm? = withContext(Dispatchers.IO) {
+        alarmDao.getAlarmEntity(id)
+    }
 
     suspend fun insertAlarm(alarm: Alarm): Long = withContext(Dispatchers.IO) {
         alarmDao.insertAlarm(alarm)

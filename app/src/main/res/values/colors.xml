@@ -43,4 +43,6 @@
     <color name="md_theme_dark_onSurface">#E6E1E5</color>
     <color name="md_theme_dark_surfaceVariant">#49454F</color>
     <color name="md_theme_dark_onSurfaceVariant">#CAC4D0</color>
+    <!-- Launcher background color referenced by adaptive icon -->
+    <color name="ic_launcher_background">#6750A4</color>
 </resources>

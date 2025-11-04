@@ -65,7 +65,7 @@ fun AlarmListScreen(viewModel: AlarmViewModel) {
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(alarms) { alarm ->
+                    items(alarms, key = { it.id }) { alarm ->
                         AlarmItem(
                             alarm = alarm,
                             onToggle = { viewModel.toggleAlarmEnabled(alarm.id, !alarm.isEnabled) },
@@ -144,6 +144,18 @@ fun AlarmItem(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+
+                if (alarm.nextAlarmTime > 0L) {
+                    val nextTime = remember(alarm.nextAlarmTime) {
+                        java.text.SimpleDateFormat("EEE HH:mm", java.util.Locale.getDefault())
+                            .format(java.util.Date(alarm.nextAlarmTime))
+                    }
+                    Text(
+                        text = "Next: $nextTime",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                    )
+                }
             }
 
             Column(
