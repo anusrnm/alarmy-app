@@ -17,6 +17,7 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.VibrationEffect
 import android.os.Vibrator
+import android.os.VibratorManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.example.alarmyapp.MainActivity
@@ -40,7 +41,14 @@ class AlarmService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        // Acquire vibrator in a backwards-compatible way (VibratorManager from API 31+)
+        vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val vm = getSystemService(VibratorManager::class.java)
+            vm?.defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        }
         stopHandler = Handler(Looper.getMainLooper())
     }
 
@@ -196,7 +204,13 @@ class AlarmService : Service() {
 
         stopHandler?.removeCallbacksAndMessages(null)
 
-        stopForeground(true)
+        // Use new stopForeground(int) API (API 33+) while keeping backward compatibility
+        if (Build.VERSION.SDK_INT >= 33) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } else {
+            @Suppress("DEPRECATION")
+            stopForeground(true)
+        }
         stopSelf()
     }
 
