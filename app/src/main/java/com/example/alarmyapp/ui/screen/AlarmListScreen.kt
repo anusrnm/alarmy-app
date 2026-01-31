@@ -296,7 +296,7 @@ fun ReminderItem(
                         }
                     }
                     
-                    // Ring count badge
+                    // Duration badge
                     Surface(
                         shape = RoundedCornerShape(8.dp),
                         color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = if (isEnabled) 1f else 0.5f)
@@ -313,7 +313,7 @@ fun ReminderItem(
                                 tint = MaterialTheme.colorScheme.onTertiaryContainer
                             )
                             Text(
-                                text = "×${alarm.ringCount}",
+                                text = alarm.durationString,
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onTertiaryContainer
                             )

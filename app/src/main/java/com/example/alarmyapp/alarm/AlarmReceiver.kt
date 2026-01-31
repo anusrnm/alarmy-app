@@ -16,14 +16,14 @@ class AlarmReceiver : BroadcastReceiver() {
         if (intent.action == "com.example.alarmyapp.ALARM_TRIGGER") {
             val alarmId = intent.getIntExtra("alarm_id", -1)
             val alarmLabel = intent.getStringExtra("alarm_label")
-            val ringCount = intent.getIntExtra("ring_count", 3)
+            val durationSeconds = intent.getIntExtra("duration_seconds", 30)
 
             if (alarmId != -1) {
                 // Start the reminder service
                 val serviceIntent = Intent(context, AlarmService::class.java).apply {
                     putExtra("alarm_id", alarmId)
                     putExtra("alarm_label", alarmLabel)
-                    putExtra("ring_count", ringCount)
+                    putExtra("duration_seconds", durationSeconds)
                 }
                 
                 context.startForegroundService(serviceIntent)

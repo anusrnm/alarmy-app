@@ -13,11 +13,18 @@ data class Alarm(
     var isEnabled: Boolean = true,
     var isRepeating: Boolean = false,
     var repeatDays: Set<Int> = emptySet(),
-    var ringCount: Int = 3,
+    var durationSeconds: Int = 30,
     var nextAlarmTime: Long = 0
 ) {
     val timeString: String
         get() = String.format("%02d:%02d", hour, minute)
+    
+    val durationString: String
+        get() = when {
+            durationSeconds < 60 -> "${durationSeconds}s"
+            durationSeconds % 60 == 0 -> "${durationSeconds / 60}m"
+            else -> "${durationSeconds / 60}m ${durationSeconds % 60}s"
+        }
     
     val repeatDaysString: String
         get() {

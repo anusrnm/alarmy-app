@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
@@ -13,10 +15,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.alarmyapp.data.model.Alarm
@@ -33,7 +40,7 @@ fun AlarmEditDialog(
     var label by remember { mutableStateOf(alarm?.label ?: "Reminder") }
     var isRepeating by remember { mutableStateOf(alarm?.isRepeating ?: false) }
     var repeatDays by remember { mutableStateOf(alarm?.repeatDays ?: setOf<Int>()) }
-    var ringCount by remember { mutableStateOf(alarm?.ringCount ?: 3) }
+    var durationSeconds by remember { mutableStateOf(alarm?.durationSeconds ?: 30) }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -70,7 +77,7 @@ fun AlarmEditDialog(
                         
                         Spacer(modifier = Modifier.height(20.dp))
                         
-                        TimePickerWheel(
+                        EditableTimePicker(
                             hour = hour,
                             minute = minute,
                             onHourChange = { hour = it },
@@ -105,14 +112,14 @@ fun AlarmEditDialog(
                         )
                     }
 
-                    // Ring Count
+                    // Duration
                     SettingSection(
-                        icon = Icons.Outlined.NotificationsActive,
-                        title = "Ring $ringCount time${if (ringCount > 1) "s" else ""}"
+                        icon = Icons.Outlined.Timer,
+                        title = "Sound Duration"
                     ) {
-                        RingCountSelector(
-                            count = ringCount,
-                            onSelect = { ringCount = it }
+                        DurationSelector(
+                            seconds = durationSeconds,
+                            onSelect = { durationSeconds = it }
                         )
                     }
 
@@ -186,7 +193,7 @@ fun AlarmEditDialog(
                                 newAlarm.label = label
                                 newAlarm.isRepeating = isRepeating
                                 newAlarm.repeatDays = repeatDays
-                                newAlarm.ringCount = ringCount
+                                newAlarm.durationSeconds = durationSeconds
                                 newAlarm.isEnabled = true
                                 
                                 onSave(newAlarm)
@@ -215,89 +222,186 @@ fun AlarmEditDialog(
 }
 
 @Composable
-fun TimePickerWheel(
+fun EditableTimePicker(
     hour: Int,
     minute: Int,
     onHourChange: (Int) -> Unit,
     onMinuteChange: (Int) -> Unit
 ) {
+    var hourText by remember(hour) { mutableStateOf(String.format("%02d", hour)) }
+    var minuteText by remember(minute) { mutableStateOf(String.format("%02d", minute)) }
+    
     Row(
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth()
     ) {
-        // Hour picker
+        // Hour input with arrows
         Column(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             IconButton(
-                onClick = { onHourChange((hour + 1) % 24) },
-                modifier = Modifier.size(48.dp)
+                onClick = { 
+                    val newHour = (hour + 1) % 24
+                    onHourChange(newHour)
+                    hourText = String.format("%02d", newHour)
+                },
+                modifier = Modifier.size(40.dp)
             ) {
                 Icon(
                     Icons.Default.KeyboardArrowUp,
                     contentDescription = "Increase hour",
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                 )
             }
             
-            Text(
-                text = String.format("%02d", hour),
-                style = MaterialTheme.typography.displayLarge,
-                fontWeight = FontWeight.Light,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f),
+                modifier = Modifier.size(80.dp, 70.dp)
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center
+                ) {
+                    BasicTextField(
+                        value = hourText,
+                        onValueChange = { newValue ->
+                            if (newValue.length <= 2 && newValue.all { it.isDigit() }) {
+                                hourText = newValue
+                                newValue.toIntOrNull()?.let { h ->
+                                    if (h in 0..23) onHourChange(h)
+                                }
+                            }
+                        },
+                        textStyle = TextStyle(
+                            fontSize = 48.sp,
+                            fontWeight = FontWeight.Light,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            textAlign = TextAlign.Center
+                        ),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { focusState ->
+                                if (!focusState.isFocused) {
+                                    // Validate and format on blur
+                                    val h = hourText.toIntOrNull()
+                                    if (h != null && h in 0..23) {
+                                        hourText = String.format("%02d", h)
+                                        onHourChange(h)
+                                    } else {
+                                        hourText = String.format("%02d", hour)
+                                    }
+                                }
+                            }
+                    )
+                }
+            }
             
             IconButton(
-                onClick = { onHourChange(if (hour == 0) 23 else hour - 1) },
-                modifier = Modifier.size(48.dp)
+                onClick = { 
+                    val newHour = if (hour == 0) 23 else hour - 1
+                    onHourChange(newHour)
+                    hourText = String.format("%02d", newHour)
+                },
+                modifier = Modifier.size(40.dp)
             ) {
                 Icon(
                     Icons.Default.KeyboardArrowDown,
                     contentDescription = "Decrease hour",
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                 )
             }
         }
         
         Text(
             text = ":",
-            style = MaterialTheme.typography.displayLarge,
-            fontWeight = FontWeight.Light,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
-            modifier = Modifier.padding(horizontal = 8.dp)
+            style = TextStyle(
+                fontSize = 48.sp,
+                fontWeight = FontWeight.Light,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            ),
+            modifier = Modifier.padding(horizontal = 4.dp)
         )
         
-        // Minute picker
+        // Minute input with arrows
         Column(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             IconButton(
-                onClick = { onMinuteChange((minute + 1) % 60) },
-                modifier = Modifier.size(48.dp)
+                onClick = { 
+                    val newMinute = (minute + 1) % 60
+                    onMinuteChange(newMinute)
+                    minuteText = String.format("%02d", newMinute)
+                },
+                modifier = Modifier.size(40.dp)
             ) {
                 Icon(
                     Icons.Default.KeyboardArrowUp,
                     contentDescription = "Increase minute",
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                 )
             }
             
-            Text(
-                text = String.format("%02d", minute),
-                style = MaterialTheme.typography.displayLarge,
-                fontWeight = FontWeight.Light,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f),
+                modifier = Modifier.size(80.dp, 70.dp)
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center
+                ) {
+                    BasicTextField(
+                        value = minuteText,
+                        onValueChange = { newValue ->
+                            if (newValue.length <= 2 && newValue.all { it.isDigit() }) {
+                                minuteText = newValue
+                                newValue.toIntOrNull()?.let { m ->
+                                    if (m in 0..59) onMinuteChange(m)
+                                }
+                            }
+                        },
+                        textStyle = TextStyle(
+                            fontSize = 48.sp,
+                            fontWeight = FontWeight.Light,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            textAlign = TextAlign.Center
+                        ),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { focusState ->
+                                if (!focusState.isFocused) {
+                                    // Validate and format on blur
+                                    val m = minuteText.toIntOrNull()
+                                    if (m != null && m in 0..59) {
+                                        minuteText = String.format("%02d", m)
+                                        onMinuteChange(m)
+                                    } else {
+                                        minuteText = String.format("%02d", minute)
+                                    }
+                                }
+                            }
+                    )
+                }
+            }
             
             IconButton(
-                onClick = { onMinuteChange(if (minute == 0) 59 else minute - 1) },
-                modifier = Modifier.size(48.dp)
+                onClick = { 
+                    val newMinute = if (minute == 0) 59 else minute - 1
+                    onMinuteChange(newMinute)
+                    minuteText = String.format("%02d", newMinute)
+                },
+                modifier = Modifier.size(40.dp)
             ) {
                 Icon(
                     Icons.Default.KeyboardArrowDown,
                     contentDescription = "Decrease minute",
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                 )
             }
         }
@@ -334,18 +438,25 @@ fun SettingSection(
 }
 
 @Composable
-fun RingCountSelector(
-    count: Int,
+fun DurationSelector(
+    seconds: Int,
     onSelect: (Int) -> Unit
 ) {
-    val options = listOf(1, 2, 3, 5, 10)
+    // Options: 10s, 30s, 1m, 2m, 5m
+    val options = listOf(
+        10 to "10s",
+        30 to "30s",
+        60 to "1m",
+        120 to "2m",
+        300 to "5m"
+    )
     
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        options.forEach { value ->
-            val isSelected = count == value
+        options.forEach { (value, label) ->
+            val isSelected = seconds == value
             
             Surface(
                 modifier = Modifier
@@ -356,7 +467,7 @@ fun RingCountSelector(
                 else MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Text(
-                    text = "$value",
+                    text = label,
                     modifier = Modifier.padding(vertical = 14.dp),
                     textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.titleMedium,

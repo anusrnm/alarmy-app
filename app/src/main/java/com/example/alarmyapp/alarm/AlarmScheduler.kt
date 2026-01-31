@@ -31,7 +31,7 @@ class AlarmScheduler @Inject constructor(
             action = ALARM_ACTION
             putExtra("alarm_id", alarm.id)
             putExtra("alarm_label", alarm.label)
-            putExtra("ring_count", alarm.ringCount)
+            putExtra("duration_seconds", alarm.durationSeconds)
         }
 
         val pendingIntent = PendingIntent.getBroadcast(

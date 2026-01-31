@@ -27,17 +27,15 @@ class AlarmService : Service() {
         private const val TAG = "AlarmService"
         private const val CHANNEL_ID = "reminder_channel"
         private const val NOTIFICATION_ID = 1001
-        private const val RING_DURATION_MS = 2000L // Each ring lasts 2 seconds
-        private const val RING_PAUSE_MS = 1000L // Pause between rings
     }
     
     private var mediaPlayer: MediaPlayer? = null
     private var vibrator: Vibrator? = null
-    private var ringHandler: Handler? = null
+    private var stopHandler: Handler? = null
     private var alarmId: Int = -1
     private var alarmLabel: String? = null
-    private var ringCount: Int = 3
-    private var currentRing: Int = 0
+    private var durationSeconds: Int = 30
+    private var startTimeMs: Long = 0
 
     override fun onCreate() {
         super.onCreate()
@@ -49,55 +47,32 @@ class AlarmService : Service() {
             @Suppress("DEPRECATION")
             getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
         }
-        ringHandler = Handler(Looper.getMainLooper())
+        stopHandler = Handler(Looper.getMainLooper())
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         intent?.let {
             alarmId = it.getIntExtra("alarm_id", -1)
             alarmLabel = it.getStringExtra("alarm_label")
-            ringCount = it.getIntExtra("ring_count", 3)
-            currentRing = 0
+            durationSeconds = it.getIntExtra("duration_seconds", 30)
+            startTimeMs = System.currentTimeMillis()
 
             startForeground(NOTIFICATION_ID, createReminderNotification())
             
-            // Start the ring sequence
-            playRingSequence()
+            // Start playing sound
+            playSoundLoop()
+            vibrateLoop()
+            
+            // Schedule auto-stop after duration
+            stopHandler?.postDelayed({
+                stopAlarm()
+            }, durationSeconds * 1000L)
         }
         
         return START_NOT_STICKY
     }
 
-    private fun playRingSequence() {
-        if (currentRing >= ringCount) {
-            // Done ringing, stop the service
-            stopAlarm()
-            return
-        }
-
-        currentRing++
-        
-        // Play sound and vibrate
-        playRingSound()
-        vibrate()
-        
-        // Schedule next ring or stop
-        ringHandler?.postDelayed({
-            mediaPlayer?.stop()
-            mediaPlayer?.reset()
-            
-            if (currentRing < ringCount) {
-                // Wait a bit then ring again
-                ringHandler?.postDelayed({
-                    playRingSequence()
-                }, RING_PAUSE_MS)
-            } else {
-                stopAlarm()
-            }
-        }, RING_DURATION_MS)
-    }
-
-    private fun playRingSound() {
+    private fun playSoundLoop() {
         try {
             val alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
                 ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
@@ -112,25 +87,28 @@ class AlarmService : Service() {
                     .build()
                 setAudioAttributes(attributes)
                 
-                isLooping = false
+                isLooping = true // Loop continuously
                 setVolume(1.0f, 1.0f)
                 
                 prepare()
                 start()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error playing ring sound", e)
+            Log.e(TAG, "Error playing sound", e)
         }
     }
 
-    private fun vibrate() {
+    private fun vibrateLoop() {
         vibrator?.let { vib ->
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val effect = VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE)
+                // Vibrate pattern: 500ms on, 500ms off, repeating
+                val timings = longArrayOf(0, 500, 500)
+                val amplitudes = intArrayOf(0, VibrationEffect.DEFAULT_AMPLITUDE, 0)
+                val effect = VibrationEffect.createWaveform(timings, amplitudes, 0) // 0 = repeat
                 vib.vibrate(effect)
             } else {
                 @Suppress("DEPRECATION")
-                vib.vibrate(500)
+                vib.vibrate(longArrayOf(0, 500, 500), 0) // 0 = repeat
             }
         }
     }
@@ -150,11 +128,17 @@ class AlarmService : Service() {
         val dismissPendingIntent = PendingIntent.getBroadcast(
             this, alarmId, dismissIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+        
+        val durationText = if (durationSeconds >= 60) {
+            "${durationSeconds / 60}m"
+        } else {
+            "${durationSeconds}s"
+        }
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_alarm)
             .setContentTitle(alarmLabel ?: "Reminder")
-            .setContentText("Ringing $currentRing of $ringCount")
+            .setContentText("Playing for $durationText")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)
@@ -190,7 +174,7 @@ class AlarmService : Service() {
         mediaPlayer = null
 
         vibrator?.cancel()
-        ringHandler?.removeCallbacksAndMessages(null)
+        stopHandler?.removeCallbacksAndMessages(null)
 
         if (Build.VERSION.SDK_INT >= 33) {
             stopForeground(STOP_FOREGROUND_REMOVE)
