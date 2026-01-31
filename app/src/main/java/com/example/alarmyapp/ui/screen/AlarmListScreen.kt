@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.NotificationsOff
 import androidx.compose.material.icons.outlined.NotificationsActive
+import androidx.compose.material.icons.outlined.MusicNote
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -26,6 +27,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.alarmyapp.data.model.Alarm
+import com.example.alarmyapp.data.model.SoundType
 import com.example.alarmyapp.viewmodel.AlarmViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -307,13 +309,13 @@ fun ReminderItem(
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Icon(
-                                Icons.Outlined.NotificationsActive,
+                                Icons.Outlined.MusicNote,
                                 contentDescription = null,
                                 modifier = Modifier.size(14.dp),
                                 tint = MaterialTheme.colorScheme.onTertiaryContainer
                             )
                             Text(
-                                text = alarm.durationString,
+                                text = "${alarm.soundDisplayName} · ${alarm.durationString}",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onTertiaryContainer
                             )

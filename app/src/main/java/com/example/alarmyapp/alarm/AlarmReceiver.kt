@@ -17,6 +17,7 @@ class AlarmReceiver : BroadcastReceiver() {
             val alarmId = intent.getIntExtra("alarm_id", -1)
             val alarmLabel = intent.getStringExtra("alarm_label")
             val durationSeconds = intent.getIntExtra("duration_seconds", 30)
+            val soundType = intent.getStringExtra("sound_type") ?: "tweet"
 
             if (alarmId != -1) {
                 // Start the reminder service
@@ -24,6 +25,7 @@ class AlarmReceiver : BroadcastReceiver() {
                     putExtra("alarm_id", alarmId)
                     putExtra("alarm_label", alarmLabel)
                     putExtra("duration_seconds", durationSeconds)
+                    putExtra("sound_type", soundType)
                 }
                 
                 context.startForegroundService(serviceIntent)

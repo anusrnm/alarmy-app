@@ -1,6 +1,14 @@
 package com.example.alarmyapp.ui.screen
 
+import android.media.AudioAttributes
+import android.media.AudioFormat
+import android.media.AudioTrack
+import android.media.MediaPlayer
+import android.media.RingtoneManager
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -18,6 +26,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -27,6 +36,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.alarmyapp.data.model.Alarm
+import com.example.alarmyapp.data.model.SoundType
+import kotlin.math.sin
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,6 +52,7 @@ fun AlarmEditDialog(
     var isRepeating by remember { mutableStateOf(alarm?.isRepeating ?: false) }
     var repeatDays by remember { mutableStateOf(alarm?.repeatDays ?: setOf<Int>()) }
     var durationSeconds by remember { mutableStateOf(alarm?.durationSeconds ?: 30) }
+    var soundType by remember { mutableStateOf(alarm?.soundType ?: SoundType.TWEET) }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -49,14 +61,16 @@ fun AlarmEditDialog(
         Card(
             modifier = Modifier
                 .fillMaxWidth(0.95f)
-                .wrapContentHeight(),
+                .fillMaxHeight(0.9f),
             shape = RoundedCornerShape(28.dp),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surface
             )
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
             ) {
                 // Header with Time Picker
                 Box(
@@ -120,6 +134,17 @@ fun AlarmEditDialog(
                         DurationSelector(
                             seconds = durationSeconds,
                             onSelect = { durationSeconds = it }
+                        )
+                    }
+
+                    // Sound Type
+                    SettingSection(
+                        icon = Icons.Outlined.MusicNote,
+                        title = "Sound"
+                    ) {
+                        SoundSelector(
+                            selectedSound = soundType,
+                            onSelect = { soundType = it }
                         )
                     }
 
@@ -194,6 +219,7 @@ fun AlarmEditDialog(
                                 newAlarm.isRepeating = isRepeating
                                 newAlarm.repeatDays = repeatDays
                                 newAlarm.durationSeconds = durationSeconds
+                                newAlarm.soundType = soundType
                                 newAlarm.isEnabled = true
                                 
                                 onSave(newAlarm)
@@ -246,7 +272,7 @@ fun EditableTimePicker(
                     onHourChange(newHour)
                     hourText = String.format("%02d", newHour)
                 },
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(32.dp)
             ) {
                 Icon(
                     Icons.Default.KeyboardArrowUp,
@@ -258,7 +284,7 @@ fun EditableTimePicker(
             Surface(
                 shape = RoundedCornerShape(12.dp),
                 color = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f),
-                modifier = Modifier.size(80.dp, 70.dp)
+                modifier = Modifier.size(70.dp, 56.dp)
             ) {
                 Box(
                     contentAlignment = Alignment.Center
@@ -274,7 +300,7 @@ fun EditableTimePicker(
                             }
                         },
                         textStyle = TextStyle(
-                            fontSize = 48.sp,
+                            fontSize = 36.sp,
                             fontWeight = FontWeight.Light,
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                             textAlign = TextAlign.Center
@@ -306,7 +332,7 @@ fun EditableTimePicker(
                     onHourChange(newHour)
                     hourText = String.format("%02d", newHour)
                 },
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(32.dp)
             ) {
                 Icon(
                     Icons.Default.KeyboardArrowDown,
@@ -319,7 +345,7 @@ fun EditableTimePicker(
         Text(
             text = ":",
             style = TextStyle(
-                fontSize = 48.sp,
+                fontSize = 36.sp,
                 fontWeight = FontWeight.Light,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             ),
@@ -336,7 +362,7 @@ fun EditableTimePicker(
                     onMinuteChange(newMinute)
                     minuteText = String.format("%02d", newMinute)
                 },
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(32.dp)
             ) {
                 Icon(
                     Icons.Default.KeyboardArrowUp,
@@ -348,7 +374,7 @@ fun EditableTimePicker(
             Surface(
                 shape = RoundedCornerShape(12.dp),
                 color = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f),
-                modifier = Modifier.size(80.dp, 70.dp)
+                modifier = Modifier.size(70.dp, 56.dp)
             ) {
                 Box(
                     contentAlignment = Alignment.Center
@@ -364,7 +390,7 @@ fun EditableTimePicker(
                             }
                         },
                         textStyle = TextStyle(
-                            fontSize = 48.sp,
+                            fontSize = 36.sp,
                             fontWeight = FontWeight.Light,
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                             textAlign = TextAlign.Center
@@ -396,7 +422,7 @@ fun EditableTimePicker(
                     onMinuteChange(newMinute)
                     minuteText = String.format("%02d", newMinute)
                 },
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(32.dp)
             ) {
                 Icon(
                     Icons.Default.KeyboardArrowDown,
@@ -442,8 +468,9 @@ fun DurationSelector(
     seconds: Int,
     onSelect: (Int) -> Unit
 ) {
-    // Options: 10s, 30s, 1m, 2m, 5m
+    // Options: 5s, 10s, 30s, 1m, 2m, 5m
     val options = listOf(
+        5 to "5s",
         10 to "10s",
         30 to "30s",
         60 to "1m",
@@ -453,7 +480,7 @@ fun DurationSelector(
     
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         options.forEach { (value, label) ->
             val isSelected = seconds == value
@@ -462,15 +489,15 @@ fun DurationSelector(
                 modifier = Modifier
                     .weight(1f)
                     .clickable { onSelect(value) },
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(10.dp),
                 color = if (isSelected) MaterialTheme.colorScheme.primary
                 else MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Text(
                     text = label,
-                    modifier = Modifier.padding(vertical = 14.dp),
+                    modifier = Modifier.padding(vertical = 10.dp),
                     textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.bodyMedium,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                     color = if (isSelected) MaterialTheme.colorScheme.onPrimary
                     else MaterialTheme.colorScheme.onSurfaceVariant
@@ -522,5 +549,184 @@ fun DaySelector(
                 )
             }
         }
+    }
+}
+
+@Composable
+fun SoundSelector(
+    selectedSound: String,
+    onSelect: (String) -> Unit
+) {
+    val context = LocalContext.current
+    var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
+    var audioTrack by remember { mutableStateOf<AudioTrack?>(null) }
+    
+    // Cleanup when leaving
+    DisposableEffect(Unit) {
+        onDispose {
+            mediaPlayer?.release()
+            audioTrack?.release()
+        }
+    }
+    
+    fun previewSound(soundType: String) {
+        // Stop any current preview
+        mediaPlayer?.release()
+        mediaPlayer = null
+        audioTrack?.release()
+        audioTrack = null
+        
+        when (soundType) {
+            SoundType.SILENT -> { /* No preview */ }
+            SoundType.TWEET -> {
+                // Play tweet beep preview
+                Thread {
+                    try {
+                        val sampleRate = 44100
+                        val frequency = 2500.0
+                        val durationMs = 150
+                        val numSamples = (sampleRate * durationMs / 1000.0).toInt()
+                        val samples = ShortArray(numSamples)
+                        
+                        for (i in 0 until numSamples) {
+                            val t = i.toDouble() / sampleRate
+                            var amplitude = sin(2.0 * Math.PI * frequency * t)
+                            val fadeIn = i.toDouble() / (numSamples * 0.1)
+                            if (fadeIn < 1.0) amplitude *= fadeIn
+                            val fadeOut = (numSamples - i).toDouble() / (numSamples * 0.1)
+                            if (fadeOut < 1.0) amplitude *= fadeOut
+                            samples[i] = (amplitude * Short.MAX_VALUE * 0.7).toInt().toShort()
+                        }
+                        
+                        val bufferSize = AudioTrack.getMinBufferSize(
+                            sampleRate,
+                            AudioFormat.CHANNEL_OUT_MONO,
+                            AudioFormat.ENCODING_PCM_16BIT
+                        )
+                        
+                        audioTrack = AudioTrack.Builder()
+                            .setAudioAttributes(
+                                AudioAttributes.Builder()
+                                    .setUsage(AudioAttributes.USAGE_ALARM)
+                                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                    .build()
+                            )
+                            .setAudioFormat(
+                                AudioFormat.Builder()
+                                    .setSampleRate(sampleRate)
+                                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                                    .build()
+                            )
+                            .setBufferSizeInBytes(bufferSize.coerceAtLeast(samples.size * 2))
+                            .setTransferMode(AudioTrack.MODE_STATIC)
+                            .build()
+                        
+                        audioTrack?.write(samples, 0, samples.size)
+                        audioTrack?.play()
+                    } catch (e: Exception) {
+                        // Ignore preview errors
+                    }
+                }.start()
+            }
+            else -> {
+                try {
+                    val soundUri = when (soundType) {
+                        SoundType.NOTIFICATION -> RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                        SoundType.ALARM -> RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                        SoundType.CHIME -> RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                        else -> RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                    }
+                    
+                    mediaPlayer = MediaPlayer().apply {
+                        setDataSource(context, soundUri)
+                        setAudioAttributes(
+                            AudioAttributes.Builder()
+                                .setUsage(AudioAttributes.USAGE_ALARM)
+                                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                .build()
+                        )
+                        prepare()
+                        start()
+                    }
+                } catch (e: Exception) {
+                    // Ignore preview errors
+                }
+            }
+        }
+    }
+    
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        SoundType.getAllTypes().forEach { type ->
+            val isSelected = selectedSound == type
+            val displayName = SoundType.getDisplayName(type)
+            val icon = when (type) {
+                SoundType.TWEET -> Icons.Outlined.GraphicEq
+                SoundType.NOTIFICATION -> Icons.Outlined.Notifications
+                SoundType.ALARM -> Icons.Outlined.Alarm
+                SoundType.CHIME -> Icons.Outlined.NotificationsActive
+                SoundType.SILENT -> Icons.Outlined.VolumeOff
+                else -> Icons.Outlined.MusicNote
+            }
+            
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { 
+                        onSelect(type)
+                        previewSound(type)
+                    },
+                shape = RoundedCornerShape(12.dp),
+                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                border = if (isSelected) null else null
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            icon,
+                            contentDescription = null,
+                            modifier = Modifier.size(22.dp),
+                            tint = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = displayName,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    
+                    if (isSelected) {
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = "Selected",
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+        }
+        
+        Text(
+            text = "Tap to preview sound",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            modifier = Modifier.padding(top = 4.dp)
+        )
     }
 }

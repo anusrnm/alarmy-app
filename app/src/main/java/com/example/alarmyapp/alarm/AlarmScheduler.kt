@@ -32,6 +32,7 @@ class AlarmScheduler @Inject constructor(
             putExtra("alarm_id", alarm.id)
             putExtra("alarm_label", alarm.label)
             putExtra("duration_seconds", alarm.durationSeconds)
+            putExtra("sound_type", alarm.soundType)
         }
 
         val pendingIntent = PendingIntent.getBroadcast(

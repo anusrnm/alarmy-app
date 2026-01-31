@@ -5,9 +5,14 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.media.AudioAttributes
+import android.media.AudioFormat
+import android.media.AudioManager
+import android.media.AudioTrack
 import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.os.Build
@@ -21,21 +26,44 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.example.alarmyapp.MainActivity
 import com.example.alarmyapp.R
+import com.example.alarmyapp.data.model.SoundType
+import kotlin.math.sin
 
 class AlarmService : Service() {
     companion object {
         private const val TAG = "AlarmService"
         private const val CHANNEL_ID = "reminder_channel"
         private const val NOTIFICATION_ID = 1001
+        
+        // Tweet beep sound parameters
+        private const val SAMPLE_RATE = 44100
+        private const val BEEP_FREQUENCY = 2500.0  // Hz - high pitched like a watch
+        private const val BEEP_DURATION_MS = 100   // Short beep
+        private const val BEEP_PAUSE_MS = 400      // Pause between beeps
     }
     
     private var mediaPlayer: MediaPlayer? = null
+    private var audioTrack: AudioTrack? = null
     private var vibrator: Vibrator? = null
     private var stopHandler: Handler? = null
+    private var beepHandler: Handler? = null
     private var alarmId: Int = -1
     private var alarmLabel: String? = null
     private var durationSeconds: Int = 30
+    private var soundType: String = SoundType.TWEET
     private var startTimeMs: Long = 0
+    private var isPlaying: Boolean = false
+    
+    // Volume button receiver to stop alarm
+    private val volumeButtonReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "android.media.VOLUME_CHANGED_ACTION" && isPlaying) {
+                Log.d(TAG, "Volume button pressed - stopping alarm")
+                stopAlarm()
+            }
+        }
+    }
+    private var isReceiverRegistered = false
 
     override fun onCreate() {
         super.onCreate()
@@ -48,6 +76,33 @@ class AlarmService : Service() {
             getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
         }
         stopHandler = Handler(Looper.getMainLooper())
+        beepHandler = Handler(Looper.getMainLooper())
+        
+        // Register volume button receiver
+        registerVolumeButtonReceiver()
+    }
+    
+    private fun registerVolumeButtonReceiver() {
+        if (!isReceiverRegistered) {
+            val filter = IntentFilter("android.media.VOLUME_CHANGED_ACTION")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                registerReceiver(volumeButtonReceiver, filter, Context.RECEIVER_EXPORTED)
+            } else {
+                registerReceiver(volumeButtonReceiver, filter)
+            }
+            isReceiverRegistered = true
+        }
+    }
+    
+    private fun unregisterVolumeButtonReceiver() {
+        if (isReceiverRegistered) {
+            try {
+                unregisterReceiver(volumeButtonReceiver)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error unregistering receiver", e)
+            }
+            isReceiverRegistered = false
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -55,12 +110,19 @@ class AlarmService : Service() {
             alarmId = it.getIntExtra("alarm_id", -1)
             alarmLabel = it.getStringExtra("alarm_label")
             durationSeconds = it.getIntExtra("duration_seconds", 30)
+            soundType = it.getStringExtra("sound_type") ?: SoundType.TWEET
             startTimeMs = System.currentTimeMillis()
+            isPlaying = true
 
             startForeground(NOTIFICATION_ID, createReminderNotification())
             
-            // Start playing sound
-            playSoundLoop()
+            // Start playing sound based on type
+            when (soundType) {
+                SoundType.SILENT -> { /* No sound */ }
+                SoundType.TWEET -> playTweetBeepLoop()
+                else -> playSoundLoop()
+            }
+            
             vibrateLoop()
             
             // Schedule auto-stop after duration
@@ -72,14 +134,84 @@ class AlarmService : Service() {
         return START_NOT_STICKY
     }
 
+    private fun playTweetBeepLoop() {
+        if (!isPlaying) return
+        
+        // Generate and play a short beep
+        Thread {
+            try {
+                val numSamples = (SAMPLE_RATE * BEEP_DURATION_MS / 1000.0).toInt()
+                val samples = ShortArray(numSamples)
+                
+                // Generate sine wave with fade in/out for smoother sound
+                for (i in 0 until numSamples) {
+                    val t = i.toDouble() / SAMPLE_RATE
+                    var amplitude = sin(2.0 * Math.PI * BEEP_FREQUENCY * t)
+                    
+                    // Fade in first 10%
+                    val fadeIn = i.toDouble() / (numSamples * 0.1)
+                    if (fadeIn < 1.0) amplitude *= fadeIn
+                    
+                    // Fade out last 10%
+                    val fadeOut = (numSamples - i).toDouble() / (numSamples * 0.1)
+                    if (fadeOut < 1.0) amplitude *= fadeOut
+                    
+                    samples[i] = (amplitude * Short.MAX_VALUE * 0.7).toInt().toShort()
+                }
+                
+                val bufferSize = AudioTrack.getMinBufferSize(
+                    SAMPLE_RATE,
+                    AudioFormat.CHANNEL_OUT_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT
+                )
+                
+                audioTrack?.release()
+                audioTrack = AudioTrack.Builder()
+                    .setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_ALARM)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .build()
+                    )
+                    .setAudioFormat(
+                        AudioFormat.Builder()
+                            .setSampleRate(SAMPLE_RATE)
+                            .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                            .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                            .build()
+                    )
+                    .setBufferSizeInBytes(bufferSize.coerceAtLeast(samples.size * 2))
+                    .setTransferMode(AudioTrack.MODE_STATIC)
+                    .build()
+                
+                audioTrack?.write(samples, 0, samples.size)
+                audioTrack?.play()
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "Error playing tweet beep", e)
+            }
+        }.start()
+        
+        // Schedule next beep
+        beepHandler?.postDelayed({
+            if (isPlaying) {
+                playTweetBeepLoop()
+            }
+        }, BEEP_DURATION_MS.toLong() + BEEP_PAUSE_MS)
+    }
+
     private fun playSoundLoop() {
         try {
-            val alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+            val soundUri = when (soundType) {
+                SoundType.NOTIFICATION -> RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                SoundType.ALARM -> RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                SoundType.CHIME -> RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                else -> RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            } ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
 
             mediaPlayer?.release()
             mediaPlayer = MediaPlayer().apply {
-                setDataSource(this@AlarmService, alarmSound)
+                setDataSource(this@AlarmService, soundUri)
                 
                 val attributes = AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_ALARM)
@@ -87,7 +219,7 @@ class AlarmService : Service() {
                     .build()
                 setAudioAttributes(attributes)
                 
-                isLooping = true // Loop continuously
+                isLooping = true
                 setVolume(1.0f, 1.0f)
                 
                 prepare()
@@ -167,14 +299,26 @@ class AlarmService : Service() {
     }
 
     fun stopAlarm() {
+        isPlaying = false
+        
+        // Unregister volume button receiver
+        unregisterVolumeButtonReceiver()
+        
         mediaPlayer?.apply {
             stop()
             release()
         }
         mediaPlayer = null
+        
+        audioTrack?.apply {
+            stop()
+            release()
+        }
+        audioTrack = null
 
         vibrator?.cancel()
         stopHandler?.removeCallbacksAndMessages(null)
+        beepHandler?.removeCallbacksAndMessages(null)
 
         if (Build.VERSION.SDK_INT >= 33) {
             stopForeground(STOP_FOREGROUND_REMOVE)
@@ -189,6 +333,7 @@ class AlarmService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        unregisterVolumeButtonReceiver()
         stopAlarm()
     }
 }
