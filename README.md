@@ -1,238 +1,169 @@
-# Alarmy App - Advanced Android Alarm Application
+# Reminders App
 
-A comprehensive Android alarm application built with **Kotlin** and **Jetpack Compose**, featuring advanced alarm management, customizable sounds, vibration patterns, and flexible scheduling options.
+A simple, clean Android reminder application built with **Kotlin** and **Jetpack Compose**. Set reminders that ring a specific number of times to get your attention without the complexity of a full alarm app.
 
-## 🚀 Features
+## ✨ Features
 
-### Core Alarm Functionality
-- **Multiple Alarms**: Set unlimited number of alarms
-- **Flexible Scheduling**: One-time or recurring alarms
-- **Custom Repeat Patterns**: Daily, weekdays, weekends, or select specific days
-- **Smart Time Management**: Automatic calculation of next alarm trigger time
+### Simple Reminders
+- **Multiple Reminders**: Create as many reminders as you need
+- **Custom Labels**: Name each reminder for easy identification  
+- **Ring Count**: Choose how many times the reminder rings (1, 2, 3, 5, or 10 times)
+- **Repeat Schedule**: One-time or weekly on selected days
 
-### Audio & Vibration Control
-- **Volume Control**: Adjustable alarm volume (0-100%)
-- **Sound Selection**: Default alarm sound or custom sound URIs
-- **Vibration Patterns**: 4 levels (None, Light, Medium, Strong)
-- **Duration Control**: Set how long alarms ring (1-60 minutes)
+### Clean Design
+- **Modern UI**: Material Design 3 with sunrise orange theme
+- **Dark/Light Mode**: Automatic theme based on system settings
+- **Minimal Interface**: Only the settings you need, nothing more
+- **Visual Feedback**: Animated empty state and smooth transitions
 
-### User Experience
-- **Snooze Functionality**: Configurable snooze intervals
-- **Quick Actions**: Dismiss or snooze from notification
-- **Enable/Disable**: Toggle alarms without deleting
-- **Clean UI**: Material Design 3 with light/dark theme support
+### Reliable
+- **Boot Persistence**: Reminders restored after device restart
+- **Background Operation**: Works even when app is closed
+- **Notification Actions**: Dismiss directly from notification
 
-### System Integration
-- **Boot Persistence**: Alarms restored after device restart
-- **Background Operation**: Reliable alarm triggering even when app is closed
-- **Notification Management**: Full-screen alarms with action buttons
-- **Permission Handling**: Automatic request for required permissions
+## 📱 Screenshots
+
+The app features:
+- **Main Screen**: List of all reminders with time, label, repeat days, and ring count
+- **Add/Edit Dialog**: Simple time picker with label, ring count, and repeat options
 
 ## 🏗️ Architecture
 
 ### Technology Stack
 - **Language**: Kotlin
 - **UI Framework**: Jetpack Compose with Material Design 3
-- **Database**: Room with SQLite and Coroutines
-- **Architecture Pattern**: MVVM (Model-View-ViewModel)
-- **Background Processing**: AlarmManager with exact scheduling
-- **Async Operations**: Kotlin Coroutines and Flow
+- **Database**: Room with SQLite
+- **Architecture**: MVVM with Repository pattern
+- **Dependency Injection**: Hilt
+- **Background**: AlarmManager with exact scheduling
 
 ### Project Structure
 ```
 app/src/main/java/com/example/alarmyapp/
 ├── data/
-│   ├── model/           # Alarm entity and data models
-│   ├── dao/             # Database access objects
-│   ├── database/        # Room database configuration
-│   ├── repository/      # Data repository layer
-│   └── converter/       # Type converters for Room
+│   ├── model/           # Alarm entity
+│   ├── dao/             # Database access
+│   ├── database/        # Room configuration
+│   ├── repository/      # Data layer
+│   └── converter/       # Type converters
 ├── alarm/
-│   ├── AlarmScheduler   # Alarm scheduling logic
-│   ├── AlarmReceiver    # Broadcast receiver for alarm triggers
-│   ├── AlarmService     # Foreground service for alarm playback
-│   ├── BootReceiver     # Handles device boot events
-│   └── AlarmActionReceiver # Handles snooze/dismiss actions
-├── viewmodel/           # ViewModels for UI state management
+│   ├── AlarmScheduler   # Scheduling logic
+│   ├── AlarmReceiver    # Trigger handler
+│   ├── AlarmService     # Ring service
+│   ├── BootReceiver     # Boot restore
+│   └── AlarmActionReceiver # Dismiss handler
+├── viewmodel/           # UI state
 ├── ui/
-│   ├── screen/          # Compose screen components
-│   └── theme/           # Material Design theme
-└── MainActivity         # Main application entry point
+│   ├── screen/          # Compose screens
+│   └── theme/           # App theme
+└── MainActivity         # Entry point
 ```
 
-## 📱 User Interface
+## 🔧 Setup & Build
 
-### Main Screen
-- **Alarm List**: Display all configured alarms with status
-- **Quick Toggle**: Enable/disable alarms with switch controls
-- **Add Button**: Floating action button to create new alarms
-- **Time Display**: Large, clear time format (HH:MM)
-- **Status Indicators**: Visual feedback for enabled/disabled state
+### Requirements
+- Android Studio Hedgehog+ (or just JDK 17 for command line)
+- Android SDK API 24+ (Android 7.0)
+- Kotlin 1.9+
 
-### Alarm Configuration Dialog
-- **Time Picker**: Hour and minute selection
-- **Label**: Custom alarm name/description
-- **Repeat Settings**: Checkbox and day selection chips
-- **Audio Controls**: Volume slider and sound selection
-- **Vibration**: Pattern selection (None/Light/Medium/Strong)
-- **Duration**: How long alarm should ring
-- **Snooze Settings**: Enable/disable and interval configuration
+### Quick Build (Command Line)
 
-## 🔧 Setup and Installation
+**Windows:**
+```bash
+# Build debug APK
+build.bat debug
 
-### Prerequisites
-- Android Studio Hedgehog or later
-- Android SDK API 24 (Android 7.0) or higher
-- Kotlin 1.9.10 or higher
-- Java 17 compatibility
+# Build release APK
+build.bat release
 
-### Building the Project
-1. Clone the repository
-2. Open in Android Studio
-3. Sync Gradle dependencies
-4. Build and run on device or emulator
+# Clean build files
+build.bat clean
 
-### Required Permissions
-The app automatically requests these permissions:
-- `WAKE_LOCK` - Keep device awake for alarms
-- `VIBRATE` - Vibration functionality
-- `RECEIVE_BOOT_COMPLETED` - Restore alarms after reboot
-- `SCHEDULE_EXACT_ALARM` - Precise alarm scheduling
-- `POST_NOTIFICATIONS` - Display alarm notifications
-- `FOREGROUND_SERVICE` - Background alarm service
+# Build and install on connected device
+build.bat install
+```
 
-## 🎯 Key Features Implementation
+**Linux/macOS:**
+```bash
+# Make script executable (first time only)
+chmod +x build.sh
 
-### Alarm Duration Control
-- Configure alarm duration from 1 to 60 minutes
-- Automatic stop after specified duration
-- Visual duration indicator in alarm configuration
+# Build debug APK
+./build.sh debug
 
-### Multiple Alarm Support
-- Unlimited number of concurrent alarms
-- Each alarm maintains independent settings
-- Bulk enable/disable operations
-- Individual alarm management
+# Build release APK
+./build.sh release
 
-### Advanced Repeat Patterns
-- **Once**: Single-time alarm
-- **Daily**: Every day repeat
-- **Weekdays**: Monday through Friday
-- **Weekends**: Saturday and Sunday
-- **Custom**: Select specific days of the week
+# Clean build files
+./build.sh clean
 
-### Sound and Vibration Customization
-- Volume control with live preview
-- Multiple vibration intensity levels
-- Default system alarm sound integration
-- Support for custom sound URIs
+# Build and install on connected device
+./build.sh install
+```
 
-### Snooze and Dismiss Options
-- Configurable snooze intervals (1-60 minutes)
-- Quick action buttons in notifications
-- Full-screen alarm interface
-- Persistent snooze scheduling
+### Build with Gradle Directly
 
-## 🔒 Data Persistence
+```bash
+# Debug build
+./gradlew assembleDebug
 
-### Room Database Schema
-- **Alarms Table**: Stores all alarm configurations
-- **Type Converters**: Handle complex data types (Set<Integer>)
-- **Migration Support**: Database version management
-- **Backup Integration**: Automatic backup rules
+# Release build
+./gradlew assembleRelease
 
-### Alarm Scheduling Persistence
-- Alarms survive app closure and device restart
-- Automatic rescheduling after boot
-- Failure recovery mechanisms
-- Exact alarm scheduling with fallbacks
+# Install on device
+./gradlew installDebug
 
-## 🚨 System Integration
+# Run tests
+./gradlew test
 
-### Background Operation
-- **Foreground Service**: Ensures alarm playback continues
-- **Notification Channels**: Proper notification categorization
-- **Wake Lock Management**: Reliable device wake-up
-- **Battery Optimization**: Handles Doze mode and app standby
+# Clean
+./gradlew clean
+```
 
-### Notification System
-- **High Priority**: Ensures alarm visibility
-- **Full-Screen Intent**: Alarm activity over lock screen
-- **Action Buttons**: Direct snooze and dismiss options
-- **Ongoing Notification**: Persistent during alarm playback
+### Output Locations
+- **Debug APK**: `app/build/outputs/apk/debug/app-debug.apk`
+- **Release APK**: `app/build/outputs/apk/release/app-release-unsigned.apk`
 
-## 🎨 UI/UX Design
+### Build with Android Studio
+1. Open project in Android Studio
+2. Wait for Gradle sync to complete
+3. Select `Build > Build Bundle(s) / APK(s) > Build APK(s)`
+4. Or click the green Run button to build and install
 
-### Material Design 3
-- Modern Material You color system
-- Dynamic theming support
-- Consistent iconography
-- Accessible design patterns
+### Permissions
+- `SCHEDULE_EXACT_ALARM` - Precise scheduling
+- `POST_NOTIFICATIONS` - Show reminders
+- `RECEIVE_BOOT_COMPLETED` - Restore after reboot
+- `VIBRATE` - Vibration on ring
+- `FOREGROUND_SERVICE` - Background service
 
-### Responsive Layout
-- Adaptive layouts for different screen sizes
-- Touch-friendly controls
-- Clear visual hierarchy
-- Intuitive navigation patterns
+## 📋 How It Works
 
-## 🔧 Configuration Options
+### Ring Behavior
+When a reminder triggers:
+1. Plays notification sound
+2. Vibrates briefly
+3. Waits 1 second
+4. Repeats for the configured number of rings
+5. Auto-dismisses when complete
 
-### Default Settings
-- Default alarm time: 07:00
-- Default label: "Alarm"
-- Default volume: 80%
-- Default vibration: Medium
-- Default duration: 5 minutes
-- Default snooze: 5 minutes
+### Repeat Options
+- **Once**: Triggers one time, then disables
+- **Weekly**: Select specific days (Mon, Tue, Wed, etc.)
+- **Presets**: Weekdays, Weekends, Daily
 
-### Customization
-All settings are configurable per alarm:
-- Time (24-hour format)
-- Custom labels
-- Volume levels (0-100%)
-- Vibration patterns
-- Ring duration
-- Snooze intervals
-- Repeat patterns
+## 🎨 Theme
 
-## 📋 Future Enhancements
-
-### Planned Features
-- Weather-based alarm adjustments
-- Smart snooze based on sleep patterns
-- Alarm sound fade-in/fade-out
-- Location-based alarms
-- Alarm challenges (math problems, puzzles)
-- Multiple timezone support
-- Alarm analytics and statistics
-- Custom alarm sounds from device storage
-
-### Technical Improvements
-- Enhanced accessibility features
-- Widget support for home screen
-- Wear OS integration
-- Cloud backup and sync
-- Alarm history and statistics
-- Dark theme improvements
-
-## 🐛 Troubleshooting
-
-### Common Issues
-1. **Alarms not triggering**: Check permissions and battery optimization settings
-2. **Sound not playing**: Verify volume settings and Do Not Disturb mode
-3. **Alarms lost after reboot**: Ensure RECEIVE_BOOT_COMPLETED permission is granted
-4. **Notifications not showing**: Check notification permissions and channel settings
-
-### Debug Features
-- Comprehensive logging throughout alarm lifecycle
-- Error handling with user-friendly messages
-- Fallback mechanisms for critical functions
-- Debug builds with additional logging
+The app uses a custom sunrise-inspired color palette:
+- **Primary**: Sunrise Orange (#FF6B35)
+- **Secondary**: Soft Purple (#7B68EE)
+- **Tertiary**: Soft Cyan (#6FEDD6)
+- **Dark Background**: Deep Night (#1A1A2E)
 
 ## 📄 License
 
-This project is open source and available under the MIT License.
+MIT License
 
 ---
 
-**Alarmy App** - Your reliable companion for never missing important moments! 🕐⏰
+**Reminders** - Simple notifications, exactly when you need them. 🔔

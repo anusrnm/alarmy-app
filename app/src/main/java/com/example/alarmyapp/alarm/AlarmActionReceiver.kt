@@ -14,22 +14,13 @@ class AlarmActionReceiver : BroadcastReceiver() {
         val action = intent.action
         val alarmId = intent.getIntExtra("alarm_id", -1)
         
-        Log.d(TAG, "Received action: $action for alarm: $alarmId")
+        Log.d(TAG, "Received action: $action for reminder: $alarmId")
 
         when (action) {
             "DISMISS_ALARM" -> {
-                // Stop the alarm service
+                // Stop the reminder service
                 val serviceIntent = Intent(context, AlarmService::class.java)
                 context.stopService(serviceIntent)
-            }
-            "SNOOZE_ALARM" -> {
-                // Stop current alarm and schedule snooze
-                val serviceIntent = Intent(context, AlarmService::class.java)
-                context.stopService(serviceIntent)
-                
-                val snoozeInterval = intent.getIntExtra("snooze_interval", 5)
-                val scheduler = AlarmScheduler(context)
-                scheduler.scheduleSnooze(alarmId, snoozeInterval)
             }
         }
     }

@@ -9,16 +9,11 @@ data class Alarm(
     var id: Int = 0,
     var hour: Int = 7,
     var minute: Int = 0,
-    var label: String = "Alarm",
+    var label: String = "Reminder",
     var isEnabled: Boolean = true,
     var isRepeating: Boolean = false,
     var repeatDays: Set<Int> = emptySet(),
-    var soundUri: String = "default",
-    var volume: Int = 80,
-    var vibrationPattern: Int = 2,
-    var durationMinutes: Int = 5,
-    var snoozeEnabled: Boolean = true,
-    var snoozeIntervalMinutes: Int = 5,
+    var ringCount: Int = 3,
     var nextAlarmTime: Long = 0
 ) {
     val timeString: String

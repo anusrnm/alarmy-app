@@ -11,31 +11,19 @@ class AlarmReceiver : BroadcastReceiver() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
-        Log.d(TAG, "Alarm received: ${intent.action}")
+        Log.d(TAG, "Reminder received: ${intent.action}")
         
         if (intent.action == "com.example.alarmyapp.ALARM_TRIGGER") {
             val alarmId = intent.getIntExtra("alarm_id", -1)
             val alarmLabel = intent.getStringExtra("alarm_label")
-            val soundUri = intent.getStringExtra("sound_uri")
-            val volume = intent.getIntExtra("volume", 80)
-            val vibrationPattern = intent.getIntExtra("vibration_pattern", 2)
-            val durationMinutes = intent.getIntExtra("duration_minutes", 5)
-            val snoozeEnabled = intent.getBooleanExtra("snooze_enabled", true)
-            val snoozeInterval = intent.getIntExtra("snooze_interval", 5)
-            val isSnooze = intent.getBooleanExtra("is_snooze", false)
+            val ringCount = intent.getIntExtra("ring_count", 3)
 
             if (alarmId != -1) {
-                // Start the alarm service
+                // Start the reminder service
                 val serviceIntent = Intent(context, AlarmService::class.java).apply {
                     putExtra("alarm_id", alarmId)
                     putExtra("alarm_label", alarmLabel)
-                    putExtra("sound_uri", soundUri)
-                    putExtra("volume", volume)
-                    putExtra("vibration_pattern", vibrationPattern)
-                    putExtra("duration_minutes", durationMinutes)
-                    putExtra("snooze_enabled", snoozeEnabled)
-                    putExtra("snooze_interval", snoozeInterval)
-                    putExtra("is_snooze", isSnooze)
+                    putExtra("ring_count", ringCount)
                 }
                 
                 context.startForegroundService(serviceIntent)

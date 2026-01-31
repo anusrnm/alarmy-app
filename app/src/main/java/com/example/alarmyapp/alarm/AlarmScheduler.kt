@@ -31,12 +31,7 @@ class AlarmScheduler @Inject constructor(
             action = ALARM_ACTION
             putExtra("alarm_id", alarm.id)
             putExtra("alarm_label", alarm.label)
-            putExtra("sound_uri", alarm.soundUri)
-            putExtra("volume", alarm.volume)
-            putExtra("vibration_pattern", alarm.vibrationPattern)
-            putExtra("duration_minutes", alarm.durationMinutes)
-            putExtra("snooze_enabled", alarm.snoozeEnabled)
-            putExtra("snooze_interval", alarm.snoozeIntervalMinutes)
+            putExtra("ring_count", alarm.ringCount)
         }
 
         val pendingIntent = PendingIntent.getBroadcast(
@@ -80,43 +75,6 @@ class AlarmScheduler @Inject constructor(
         )
         
         alarmManager.cancel(pendingIntent)
-    }
-
-    fun scheduleSnooze(alarmId: Int, snoozeMinutes: Int) {
-        val calendar = Calendar.getInstance().apply {
-            add(Calendar.MINUTE, snoozeMinutes)
-        }
-        
-        val intent = Intent(context, AlarmReceiver::class.java).apply {
-            action = ALARM_ACTION
-            putExtra("alarm_id", alarmId)
-            putExtra("is_snooze", true)
-        }
-        
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            alarmId + 10000, // Different ID for snooze
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                alarmManager.setExactAndAllowWhileIdle(
-                    AlarmManager.RTC_WAKEUP,
-                    calendar.timeInMillis,
-                    pendingIntent
-                )
-            } else {
-                alarmManager.setExact(
-                    AlarmManager.RTC_WAKEUP,
-                    calendar.timeInMillis,
-                    pendingIntent
-                )
-            }
-        } catch (e: SecurityException) {
-            alarmManager.set(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
-        }
     }
 
     private fun calculateNextTriggerTime(alarm: Alarm): Long {
